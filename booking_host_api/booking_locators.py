@@ -1,7 +1,6 @@
 from selenium.webdriver.common.by import By
 
-login_basic_url = 'https://admin.booking.com/'
-login_otp_url = 'https://admin.booking.com/hotel/hoteladmin/groups/reservations/index.html'
+login_url = 'https://admin.booking.com/hotel/hoteladmin/groups/reservations/index.html'
 
 email_field_id = (By.ID, "loginname")
 next_button_css = (By.CSS_SELECTOR, "button[data-dv-event-id='1']")
