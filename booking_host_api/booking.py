@@ -35,7 +35,7 @@ class BookingReservation(TypedDict):
     status: str
 
     @classmethod
-    def normalize(cls, reservation: "Reservation") -> dict[str, str|int|list]:
+    def normalize(cls, reservation: "BookingReservation") -> dict[str, str|int|list]:
         """
           - date -> ISO (YYYY-MM-DD)
           - Decimal -> str
@@ -447,7 +447,7 @@ class Booking(BaseScraping):
             only_pending_request:bool = False,
             keywords:str = '',
             return_normalized = False
-            ) -> list[Reservation]:
+            ) -> list[BookingReservation]:
         """
             Returns list of Reservation dictionaries with booking info for bookings requested in arguments. 
             Returned values - according to Reservation class.
@@ -462,7 +462,7 @@ class Booking(BaseScraping):
         """
         def process_reservation(entry:dict, properties:list):
             try:
-                reservation: Reservation = {
+                reservation: BookingReservation = {
                     "id": entry["id"],
                     "checkin": datetime.strptime(entry["checkin"], "%Y-%m-%d").date(),
                     "checkout": datetime.strptime(entry["checkout"], "%Y-%m-%d").date(),
@@ -570,7 +570,7 @@ class Booking(BaseScraping):
             raise ValueError('Unexpected response.') from e
 
         if return_normalized:
-            all_reservations_normalized = [Reservation.normalize(reservation) for reservation in all_reservations]
+            all_reservations_normalized = [BookingReservation.normalize(reservation) for reservation in all_reservations]
             return all_reservations_normalized
         else:
             return all_reservations 
@@ -590,7 +590,7 @@ class Booking(BaseScraping):
             only_invoice_required:bool = False,
             keywords:str = '',
             return_normalized = False
-            ) ->list[Reservation]:
+            ) ->list[BookingReservation]:
         """
             Returns list Reservation dictionaries with booking info for bookings requested in arguments.
             Returned values - according to Reservation class.
@@ -603,7 +603,7 @@ class Booking(BaseScraping):
         
         def process_reservation(entry:dict, property_id:int, property_name:str) -> dict:
             try:
-                reservation: Reservation = {
+                reservation: BookingReservation = {
                     "id": str(entry["id"]),
                     "checkin": datetime.strptime(entry["checkin"], "%Y-%m-%d").date(),
                     "checkout": datetime.strptime(entry["checkout"], "%Y-%m-%d").date(),
@@ -699,7 +699,7 @@ class Booking(BaseScraping):
             raise ValueError('Unexpected response.') from e
 
         if return_normalized:
-            all_reservations_normalized = [Reservation.normalize(reservation) for reservation in all_reservations]
+            all_reservations_normalized = [BookingReservation.normalize(reservation) for reservation in all_reservations]
             return all_reservations_normalized
         
         return all_reservations
