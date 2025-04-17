@@ -12,7 +12,7 @@ some_not_registered_email = 'non_registered@e.mail'
 blocked_account_email = 'email@gmail.com'
 some_password = 'pass'
 some_ses = 'some_ses'
-some_cookies = {cookie_name: 'some_value' for cookie_name in locators.auth_cookie_names}
+some_auth_cookies = {cookie_name: 'some_value' for cookie_name in locators.auth_cookie_names}
 some_account_id = 12345678
 some_property_id = 12345678
 
@@ -74,10 +74,10 @@ class BasicBookingTesting(unittest.TestCase):
         for arg in args:
              setattr(cls, arg, secrets[arg])
  
-    def basic_assert_auth_data(self, ses_value, cookies_value, account_id_value):  
+    def basic_assert_auth_data(self, ses_value, auth_cookies_value, account_id_value):  
         self.assertTrue(ses_value, "ses should not be blank")
-        self.assertTrue(cookies_value, "cookies should not be blank")
+        self.assertTrue(auth_cookies_value, "auth_cookies should not be blank")
         self.assertTrue(account_id_value, "account_id should not be blank")
         self.assertIsInstance(ses_value, str, "ses should be a string")
-        self.assertIsInstance(cookies_value, dict, "cookies should be a dict")
+        self.assertIsInstance(auth_cookies_value, dict, "auth_cookies should be a dict")
         self.assertIsInstance(account_id_value, int, "account_id should be an integer")

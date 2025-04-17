@@ -5,23 +5,23 @@ from booking_host_api.booking import Booking
 from booking_host_api.base import AuthenticationError
 
 from .common import BasicBookingTesting, write_private_data_to_file, read_private_data, compare_dicts
-from .common import some_ses, some_cookies, some_property_id
+from .common import some_ses, some_auth_cookies, some_property_id
 
 class TestBookingMethods(BasicBookingTesting):
     """
         Positive methods test.
         
         Provide json file ("tests/private_data.json" by default, see common.PRIVATE_DATA_FILE_PATH) with 
-        valid ses, cookies and account_id and test cases data. See tests/private_data_template.json for 
+        valid ses, auth_cookies and account_id and test cases data. See tests/private_data_template.json for 
         structure of a private data file.
 
         Run test_init_basic or test_init_otp before running tests to write valid ses, 
-        cookies and account_id in the private file or put them manually. 
+        auth_cookies and account_id in the private file or put them manually. 
     """
     @classmethod
     def setUpClass(cls):
-        cls.read_private_data_to_class('ses', 'cookies', 'account_id')
-        cls.api = Booking(ses=cls.ses, cookies=cls.cookies, account_id=cls.account_id)   
+        cls.read_private_data_to_class('ses', 'auth_cookies', 'account_id')
+        cls.api = Booking(ses=cls.ses, auth_cookies=cls.auth_cookies, account_id=cls.account_id)   
 
     def test_get_account_reservations(self):
         test_cases:list[dict] = read_private_data('get_reservations_cases')
@@ -102,7 +102,7 @@ class TestBookingMethods(BasicBookingTesting):
             with self.subTest(case_number=case_num):
                 expected_phone = case.pop('phone')
                 phone = self.api.get_phone(**case)
-                write_private_data_to_file(ses=self.api.access_ses(), cookies=self.api.access_cookies(), account_id=self.api.access_account_id())
+                write_private_data_to_file(ses=self.api.access_ses(), auth_cookies=self.api.access_auth_cookies(), account_id=self.api.access_account_id())
 
                 self.assertEqual(
                     expected_phone, 
@@ -119,7 +119,7 @@ class TestBookingMethods(BasicBookingTesting):
             with self.subTest(case_number=case_num):
                 expected_payout = case.pop('payout')
                 payout = self.api.get_payout(**case)
-                write_private_data_to_file(ses=self.api.access_ses(), cookies=self.api.access_cookies(), account_id=self.api.access_account_id())
+                write_private_data_to_file(ses=self.api.access_ses(), auth_cookies=self.api.access_auth_cookies(), account_id=self.api.access_account_id())
                 
                 self.assertEqual(
                     expected_payout, 
@@ -152,32 +152,32 @@ class TestBookingMethodsExceptions(BasicBookingTesting):
         Negative exceptive methods test.
         
         Provide json file ("tests/private_data.json" by default, see common.PRIVATE_DATA_FILE_PATH) with 
-        valid ses, cookies and account_id. See tests/private_data_template.json for 
+        valid ses, auth_cookies and account_id. See tests/private_data_template.json for 
         structure of a private data file.
     """
     @classmethod
     def setUpClass(cls):
-        cls.read_private_data_to_class('ses', 'cookies', 'account_id')
+        cls.read_private_data_to_class('ses', 'auth_cookies', 'account_id')
 
     def test_methods_exceptions(self):
         test_cases = [
             {   
                 "init_kwargs": {
                     'ses': some_ses, 
-                    'cookies': self.cookies, 
+                    'auth_cookies': self.auth_cookies, 
                     'account_id': self.account_id,
                     },
-                'msg': 'ses or cookies are expired or nonvalid. Update running with an email and password. '
-                    'To run get_account_reservations use ses/cookies retrieved with OTP initialization.'
+                'msg': 'ses or auth_cookies are expired or nonvalid. Update running with an email and password. '
+                    'To run get_account_reservations use ses/auth_cookies retrieved with OTP initialization.'
             },
             {   
                 "init_kwargs": {
                     'ses': self.ses, 
-                    'cookies': some_cookies, 
+                    'auth_cookies': some_auth_cookies, 
                     'account_id': self.account_id,
                     },
-                'msg': 'ses or cookies are expired or nonvalid. Update running with an email and password. '
-                    'To run get_account_reservations use ses/cookies retrieved with OTP initialization.'
+                'msg': 'ses or auth_cookies are expired or nonvalid. Update running with an email and password. '
+                    'To run get_account_reservations use ses/auth_cookies retrieved with OTP initialization.'
             },
         ]
         
