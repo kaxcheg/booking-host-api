@@ -279,9 +279,8 @@ class Booking(BaseScraping):
                 raise AuthenticationError(f'{error_text}')
 
         driver = self.driver
-        OTP_required = bool(self._OTP_func)
-        login_url = locators.login_otp_url if OTP_required else locators.login_basic_url
-        driver.get(login_url)
+        OTP_func_provided = bool(self._OTP_func)
+        driver.get(locators.login_url)
 
         wait_for_element = WebDriverWait(driver, ELEMENT_WAIT_TIMEOUT)
 
@@ -318,41 +317,32 @@ class Booking(BaseScraping):
         
         wait_for_setup = WebDriverWait(driver, SETUP_WAIT_TIMEOUT)
 
-        if not OTP_required:
-            try:
-                signin_result = wait_for_setup.until(
-                    lambda driver: setup(driver) or EC.any_of(
-                        EC.presence_of_element_located(locators.invalid_password_id),
-                        EC.presence_of_element_located(locators.account_locked_css),
-                        EC.presence_of_element_located(locators.sms_verification_link_css)
-                    )(driver))
-            except TimeoutException as e:
-                raise_scraping_error(locators.invalid_password_id, e, extra_raise_condition='Failed to setup')
-            
-            # setup was successfully run and returned bool type (True)
-            if isinstance(signin_result, bool):         
-                return
-            
-            elif signin_result.get_attribute('id') == locators.invalid_password_id[1]:
-                raise AuthenticationError('Wrong password.')
-            
-            elif signin_result.get_attribute('class') == locators.account_locked_css[1]:
-                raise AuthenticationError('Account blocked.')
-            else:
-                raise ScrapingError('Unexpected OTP verification was required. Run with OTP parameter.')
+        try:
+            signin_result = wait_for_setup.until(
+                lambda driver: setup(driver) or EC.any_of(
+                    EC.presence_of_element_located(locators.invalid_password_id),
+                    EC.presence_of_element_located(locators.account_locked_css),
+                    EC.presence_of_element_located(locators.sms_verification_link_css)
+                )(driver))
+        except TimeoutException as e:
+            raise_scraping_error(locators.invalid_password_id, e, extra_raise_condition='Failed to setup')
         
+        # setup was successfully run and returned bool type (True)
+        if isinstance(signin_result, bool):         
+            return
+        
+        elif signin_result.get_attribute('id') == locators.invalid_password_id[1]:
+            raise AuthenticationError('Wrong password.')
+        
+        elif signin_result.get_attribute('class') == locators.account_locked_css[1]:
+            raise AuthenticationError('Account blocked.')
+        
+        # OTP verification detected but no function provided
+        elif not OTP_func_provided:
+            raise AuthenticationError('OTP verification is required. Run with OTP argument.')
+        
+        # OTP verification detected and function provided 
         else:
-            try:
-                signin_result = wait_for_element.until(EC.any_of(
-                        EC.presence_of_element_located(locators.invalid_password_id),
-                        EC.presence_of_element_located(locators.sms_verification_link_css)
-                    ))
-            except TimeoutException as e:
-                raise_scraping_error((locators.invalid_password_id, locators.sms_verification_link_css), e)
-
-            if signin_result.get_attribute('id') == locators.invalid_password_id[1]:
-                raise AuthenticationError('Wrong password.')
-            
             sms_verification_link = signin_result
             del signin_result
 
