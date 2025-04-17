@@ -2,7 +2,7 @@
     "email": "your_email",
     "password": "your_password",
     "ses": null,
-    "cookies": null,
+    "auth_cookies": null,
     "account_id": null,
     "get_reservations_cases": [
         {

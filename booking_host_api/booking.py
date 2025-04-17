@@ -88,7 +88,7 @@ class Booking(BaseScraping):
         Saving auth data::
 
             ses = api.access_ses()
-            cookies = api.access_cookies()
+            auth_cookies = api.access_auth_cookies()
             account_id = api.access_account_id()
             
         Running host methods (uses requests)::
@@ -101,10 +101,10 @@ class Booking(BaseScraping):
 
         Initial run with auth data saved before (initializing runs much faster, no scraping is used)::
 
-            api = Booking(ses=ses, cookies=cookies, account_id=account_id)
+            api = Booking(ses=ses, auth_cookies=auth_cookies, account_id=account_id)
             reservations = api.get_property_reservations(property_id=12345678, date_min='2025-01-01', date_max='2025-02-01')
         
-        Initializing with auth data (ses, cookies, account_id) saved with credentials only initialization gives access to all methods, 
+        Initializing with auth data (ses, auth_cookies, account_id) saved with credentials only initialization gives access to all methods, 
         except get_account_reservations. To run this one use
         
         Initial run with OTP::
@@ -112,13 +112,13 @@ class Booking(BaseScraping):
             api = Booking(email='your_email@domain.com', password='your_password', OTP=your_get_OTP_func)
 
             ses_with_otp = api.access_ses()
-            cookies_with_otp = api.access_cookies()
+            auth_cookies_with_otp = api.access_auth_cookies()
             account_id_with_otp = api.access_account_id()
             
         Initializing with OTP or using corresponding auth data gives access to get_account_reservations, 
         providing reservations for all account properties (also runs faster then get_property_reservations)::
             
-            api = Booking(ses=ses_with_otp, cookies=cookies_with_otp, account_id=account_id_with_otp)
+            api = Booking(ses=ses_with_otp, auth_cookies=auth_cookies_with_otp, account_id=account_id_with_otp)
             reservations = api.get_account_reservations(date_min='2025-01-01', date_max='2025-02-01')
 
     """
@@ -130,12 +130,12 @@ class Booking(BaseScraping):
         browser_args:list|None = None, 
         page_load_strategy:str|None = 'none',
         ses:str|None = None,
-        cookies:dict|None = None,
+        auth_cookies:dict|None = None,
         account_id:int|None = None,
         OTP:Callable[[str], str]|None = None
         ) -> None:
         """
-        Sets auth data (ses, cookies, account_id) for using in host methods.
+        Sets auth data (ses, auth_cookies, account_id) for using in host methods.
 
         Usage options::
 
@@ -144,33 +144,33 @@ class Booking(BaseScraping):
             api = Booking(email='your_email@domain.com', password='your_password', OTP=your_get_OTP_func)
             api = Booking(email='your_email@domain.com', password='your_password', account_id=12345678, OTP=your_get_OTP_func)
         
-        Initializing with auth data (ses, cookies, account_id) saved before is fastest method::
+        Initializing with auth data (ses, auth_cookies, account_id) saved before is fastest method::
             
-            api = Booking(ses=ses, cookies=cookies, account_id=account_id)
+            api = Booking(ses=ses, auth_cookies=auth_cookies, account_id=account_id)
 
         Args:
             - email, password: credentials at Booking.com.
             - browser_args, page_load_strategy: selenium session arguments. By default browser_args will be ['--disable-gpu', '--headless']. \
                 Pass browser_args=[] to run Selenium defaults.
-            - ses, cookies, account_id - auth data saved before
+            - ses, auth_cookies, account_id - auth data saved before
             - OTP function which returns OTP code in string. Function should receive string argument with message.
         """
 
         # init with nonblank auth data
-        if ses is not None and cookies is not None and account_id is not None and email is None and password is None and OTP is None:
-            raise_if_blank({'ses': ses, 'cookies': cookies, 'account_id': account_id})
+        if ses is not None and auth_cookies is not None and account_id is not None and email is None and password is None and OTP is None:
+            raise_if_blank({'ses': ses, 'auth_cookies': auth_cookies, 'account_id': account_id})
             self._ses = ses
-            self._cookies = cookies
+            self._auth_cookies = auth_cookies
             self._account_id = account_id
 
         # init with nonblank credentials
-        elif email is not None and password is not None and ses is None and cookies is None:
+        elif email is not None and password is not None and ses is None and auth_cookies is None:
             raise_if_blank({'email': email, 'password': password})
             if account_id is not None:
                 raise_if_blank({'account_id': account_id})
 
             self._ses = None
-            self._cookies = None
+            self._auth_cookies = None
             # account_id is not falsy - correct
             self._account_id = account_id
             self._OTP_func = OTP
@@ -181,7 +181,7 @@ class Booking(BaseScraping):
                     '--headless'
                 ]
 
-            # login and setup auth data (ses, cookies, account_id if needed with Selenium
+            # login and setup auth data (ses, auth_cookies, account_id if needed with Selenium
             super().__init__(
                 email=email,
                 password=password,
@@ -191,13 +191,13 @@ class Booking(BaseScraping):
         # other init options are wrong usage
         else:
             raise InvalidParameterError('Wrong usage: provide nonblank/nonzero values for email, password and optional account_id OR '
-                'ses, cookies and account_id')
+                'ses, auth_cookies and account_id')
         
         # checking if attributes are truthy
         if not self._ses:
             raise ScrapingError('Scraping failed: ses value was not set.')
-        if not self._cookies:
-            raise ScrapingError('Scraping failed: cookies value was not set.')
+        if not self._auth_cookies:
+            raise ScrapingError('Scraping failed: auth_cookies value was not set.')
         if not self._account_id:
             raise ScrapingError('Scraping failed: account_id value was not set.')
         
@@ -208,7 +208,7 @@ class Booking(BaseScraping):
             'content-type': 'application/json',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36',
         }
-        self._session.cookies.update(self._cookies)
+        self._session.cookies.update(self._auth_cookies)
         
     def _email_login(self):
         def setup(driver):
@@ -217,7 +217,7 @@ class Booking(BaseScraping):
                 if match:
                     self._ses = match.group(1)
 
-            if not self._cookies:
+            if not self._auth_cookies:
                 cookies = {}
                 for name in locators.auth_cookie_names:
                     cookie = driver.get_cookie(name)
@@ -227,14 +227,14 @@ class Booking(BaseScraping):
                         break
 
                 if len(cookies) == len(locators.auth_cookie_names):
-                    self._cookies = cookies
+                    self._auth_cookies = cookies
 
             if not self._account_id:
                 match = re.search(r'accountId.*?(\d+)', driver.page_source)
                 if match:
                     self._account_id = int(match.group(1))
 
-            if self._ses and self._cookies and self._account_id:
+            if self._ses and self._auth_cookies and self._account_id:
                 return True
             
             return False
@@ -378,14 +378,14 @@ class Booking(BaseScraping):
             sms_login()
 
     def _login(self):
-        """Logs in and sets up ses, cookies, account_id using Selenium browser"""
+        """Logs in and sets up ses, auth_, account_id using Selenium browser"""
         self._email_login()
 
     def access_ses(self) -> str:
         return self._ses
     
-    def access_cookies(self) -> dict:
-        return self._cookies
+    def access_auth_cookies(self) -> dict:
+        return self._auth_cookies
     
     def access_account_id(self) -> int:
         return self._account_id
@@ -465,7 +465,7 @@ class Booking(BaseScraping):
             Returned values - according to Reservation class.
 
             To use method, instance should be initialized with credentials and OTP or with corresponding 
-            auth data (ses, cookies, account_id delivered by an instance which was initialized with credentials and OTP).
+            auth data (ses, auth_cookies, account_id delivered by an instance which was initialized with credentials and OTP).
 
             All arguments are used in the same way as interface on group reservations page:
             https://admin.booking.com/hotel/hoteladmin/groups/reservations/index.html 
