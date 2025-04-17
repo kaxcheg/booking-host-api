@@ -362,10 +362,11 @@ class Booking(BaseScraping):
     def access_account_id(self) -> int:
         return self._account_id
     
-    def _update_cookies(self):
-        received_cookies = dict_from_cookiejar(self._session.cookies)
-        if received_cookies != self._cookies:
-            self._cookies = received_cookies
+    def _update_auth_cookies_from_cookies(self):
+        all_cookies = dict_from_cookiejar(self._session.cookies)
+        auth_cookies = {name: value for name, value in all_cookies.items() if name in locators.auth_cookie_names}
+        if auth_cookies != self._auth_cookies:
+            self._auth_cookies = auth_cookies
 
     def get_properties(self) -> list[dict[str:int|str]]:
         """ 
@@ -472,7 +473,7 @@ class Booking(BaseScraping):
                     "status": entry["aggregatedRoomStatus"]
                     }
                 
-            except (KeyError, ValueError, InvalidOperation, IndexError):
+            except (KeyError, ValueError, InvalidOperation, IndexError) as e:
                 raise ValueError('Unexpected response.') from e        
                 
             return reservation
