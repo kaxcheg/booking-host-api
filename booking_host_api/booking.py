@@ -14,29 +14,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.keys import Keys
 
-from .base import BaseScraping, AuthenticationError, InvalidParameterError, ScrapingError
+from .base import BaseScraping, AuthenticationError, InvalidParameterError, ScrapingError, raise_auth_error_or_for_status, raise_if_blank, raise_scraping_error
 from . import booking_locators as locators
 from .config import ELEMENT_WAIT_TIMEOUT, SETUP_WAIT_TIMEOUT, ACCOUNT_RESERVATIONS_ENTRIES_LIMIT, PROPERTY_RESERVATIONS_ENTRIES_LIMIT
 
-def raise_auth_error_or_for_status(response):
-    if response.status_code == 401 and response.reason == 'Unauthorized' or \
-        response.status_code == 400 and response.reason == 'Bad Request':
-        raise AuthenticationError('ses or cookies are expired or nonvalid. Update running with an email and password. '
-            'To run get_account_reservations use ses/cookies retrieved with OTP initialization.')
-    else:
-        response.raise_for_status()
-
-def raise_if_blank(args:dict):
-    for arg_name, arg in args.items():
-        if not arg:
-            raise InvalidParameterError(f'Wrong usage: {arg_name} cannot be blank.')
-        
-def raise_scraping_error(locators, original_exception, extra_raise_condition = None):
-    msg = f'{extra_raise_condition} and none of expected locators: {locators} were not found.' \
-        if extra_raise_condition else f'None of expected locators: {locators} were not found.'
-    raise ScrapingError(msg) from original_exception
-
-class Reservation(TypedDict):
+class BookingReservation(TypedDict):
     id: str
     checkin: date
     checkout: date
@@ -433,8 +415,14 @@ class Booking(BaseScraping):
         all_properties = []
 
         response = self._session.post(locators.endpoint_graphql, params=params, headers=headers, json=json_data,)
-        raise_auth_error_or_for_status(response)
-        self._update_cookies()
+        raise_auth_error_or_for_status(response, {
+            401: 'Unauthorized', 
+            400: 'Bad Request'
+            }, 
+            'ses or auth_cookies are expired or nonvalid. Update running with an email and password. '
+            'To run get_account_reservations use ses/auth_cookies retrieved with OTP initialization.')
+
+        self._update_auth_cookies_from_cookies()
 
         try:
             for entry in response.json()['data']['partnerProperty']['propertyListv2']['properties']:
@@ -560,8 +548,13 @@ class Booking(BaseScraping):
                 json_data['variables']['input']['pagination']['offset'] = offset
 
                 response = self._session.post(locators.endpoint_graphql, headers=headers, params=params, json=json_data)
-                raise_auth_error_or_for_status(response)
-                self._update_cookies()
+                raise_auth_error_or_for_status(response, {
+                    401: 'Unauthorized', 
+                    400: 'Bad Request'
+                    }, 
+                    'ses or auth_cookies are expired or nonvalid. Update running with an email and password. '
+                    'To run get_account_reservations use ses/auth_cookies retrieved with OTP initialization.')
+                self._update_auth_cookies_from_cookies()
                 response_json = response.json()
 
                 if properties is None:
@@ -685,8 +678,13 @@ class Booking(BaseScraping):
             while has_next_page:            # has_next_page strategy should be revised
                 params['page'] = page_num   
                 response = self._session.post(url=locators.endpoint_property_reservations, headers=headers, params=params)
-                raise_auth_error_or_for_status(response)
-                self._update_cookies()
+                raise_auth_error_or_for_status(response, {
+                    401: 'Unauthorized', 
+                    400: 'Bad Request'
+                    }, 
+                    'ses or auth_cookies are expired or nonvalid. Update running with an email and password. '
+                    'To run get_account_reservations use ses/auth_cookies retrieved with OTP initialization.')
+                self._update_auth_cookies_from_cookies()
                 response_json = response.json()
                 property_id_from_response = int(response_json['params']['details']['hotel_id']['value'])
                 property_name = next((listing['name'] for listing in all_properties if listing['id'] == property_id_from_response))
@@ -721,8 +719,13 @@ class Booking(BaseScraping):
         }
 
         response = self._session.get(url=locators.endpoint_guest_profile, params=params)
-        raise_auth_error_or_for_status(response)
-        self._update_cookies()
+        raise_auth_error_or_for_status(response, {
+            401: 'Unauthorized', 
+            400: 'Bad Request'
+            }, 
+            'ses or auth_cookies are expired or nonvalid. Update running with an email and password. '
+            'To run get_account_reservations use ses/auth_cookies retrieved with OTP initialization.')
+        self._update_auth_cookies_from_cookies()
         try:
             response_json = response.json()['data']
             if not response_json['booker_profile_expired']:
@@ -749,8 +752,13 @@ class Booking(BaseScraping):
             'ses': self._ses
         }
         response = self._session.post(url=locators.endpoint_payout, params=params)
-        raise_auth_error_or_for_status(response)
-        self._update_cookies()
+        raise_auth_error_or_for_status(response, {
+            401: 'Unauthorized', 
+            400: 'Bad Request'
+            }, 
+            'ses or auth_cookies are expired or nonvalid. Update running with an email and password. '
+            'To run get_account_reservations use ses/auth_cookies retrieved with OTP initialization.')
+        self._update_auth_cookies_from_cookies()
 
         try:
             response_json = response.json()['data']
@@ -790,8 +798,13 @@ class Booking(BaseScraping):
         }
 
         response = self._session.post(url=locators.endpoint_calendar_export, headers=headers, params=params)
-        raise_auth_error_or_for_status(response)
-        self._update_cookies()
+        raise_auth_error_or_for_status(response, {
+            401: 'Unauthorized', 
+            400: 'Bad Request'
+            }, 
+            'ses or auth_cookies are expired or nonvalid. Update running with an email and password. '
+            'To run get_account_reservations use ses/auth_cookies retrieved with OTP initialization.')
+        self._update_auth_cookies_from_cookies()
 
         try:
             calendar_url = response.json()['data']['url']
@@ -799,6 +812,11 @@ class Booking(BaseScraping):
             raise ValueError('Unexpected response') from e
         
         calendar = self._session.get(url=calendar_url)
-        raise_auth_error_or_for_status(calendar)
+        raise_auth_error_or_for_status(calendar, {
+            401: 'Unauthorized', 
+            400: 'Bad Request'
+            }, 
+            'ses or auth_cookies are expired or nonvalid. Update running with an email and password. '
+            'To run get_account_reservations use ses/auth_cookies retrieved with OTP initialization.')
         normalized_text = calendar.text.replace('\r\n', '\n')
         return normalized_text
