@@ -37,7 +37,12 @@ class TestBookingMethods(BasicBookingTesting):
                 del case['only_corporate_card']
                 del case['only_invoice_required']
                 reservations = self.api.get_account_reservations(**case)
-                write_private_data_to_file(ses=self.api.access_ses(), cookies=self.api.access_cookies(), account_id=self.api.access_account_id())
+                # rooms filed is set to None with get_account_reservations method
+                for entry in expected_reservations:
+                    del entry["rooms"]
+                for entry in reservations:
+                    del entry["rooms"]
+                write_private_data_to_file(ses=self.api.access_ses(), auth_cookies=self.api.access_auth_cookies(), account_id=self.api.access_account_id())
 
                 received_number = len(reservations)
                 self.assertEqual(
@@ -59,7 +64,8 @@ class TestBookingMethods(BasicBookingTesting):
                                 except AssertionError as e:
                                     print(f'Case num {case_num}: expected and returned reservation for booking number {expected_reservation['id']} differ:')
                                     compare_dicts(expected_reservation, reservation, 'expected reservation', 'returned reservation')
-
+                                    raise AssertionError from e
+                                
     def test_get_property_reservations(self):
         test_cases:list[dict] = read_private_data('get_reservations_cases')
 
@@ -71,7 +77,14 @@ class TestBookingMethods(BasicBookingTesting):
                 # following parameter is not passed to get_property_reservations
                 del case['only_paid_online']
                 reservations = self.api.get_property_reservations(**case)
-                write_private_data_to_file(ses=self.api.access_ses(), cookies=self.api.access_cookies(), account_id=self.api.access_account_id())
+                # total_price can be set to 0.00 if cancelled; guest_name may differ between methods
+                for entry in expected_reservations: 
+                    del entry["total_price"]
+                    del entry["guest_name"]
+                for entry in reservations: 
+                    del entry["total_price"]
+                    del entry["guest_name"]
+                write_private_data_to_file(ses=self.api.access_ses(), auth_cookies=self.api.access_auth_cookies(), account_id=self.api.access_account_id())
 
                 received_number = len(reservations)
                 self.assertEqual(
@@ -93,7 +106,8 @@ class TestBookingMethods(BasicBookingTesting):
                             except AssertionError as e:
                                 print(f'Case num {case_num}: expected and returned reservation for booking number {expected_reservation['id']} differ:')
                                 compare_dicts(expected_reservation, reservation, 'expected reservation', 'returned reservation')
-
+                                raise AssertionError from e
+                            
     def test_get_phone(self):
         test_cases:list[dict] = read_private_data('get_phone_cases')
 
