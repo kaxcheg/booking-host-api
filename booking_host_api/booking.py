@@ -14,7 +14,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.keys import Keys
 
-from .base import BaseScraping, AuthenticationError, InvalidParameterError, ScrapingError, raise_auth_error_or_for_status, raise_if_blank, raise_scraping_error
+from base.base import (
+    BaseScraping, AuthenticationError, InvalidParameterError, ScrapingError, 
+    raise_auth_error_or_for_status, raise_if_blank, raise_scraping_error)
 from . import booking_locators as locators
 from .config import ELEMENT_WAIT_TIMEOUT, SETUP_WAIT_TIMEOUT, ACCOUNT_RESERVATIONS_ENTRIES_LIMIT, PROPERTY_RESERVATIONS_ENTRIES_LIMIT
 
