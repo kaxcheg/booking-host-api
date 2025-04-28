@@ -7,6 +7,7 @@ next_button_css = (By.CSS_SELECTOR, "button[data-dv-event-id='1']")
 invalid_email_id = (By.ID, 'loginname-note')
 password_field_id = (By.ID, "password")
 invalid_password_id = (By.ID, 'password-note')
+captcha_css = (By.CLASS_NAME, "amzn-captcha-modal")
 account_locked_css = (By.CLASS_NAME, "nw-account-locked")
 signin_button_css = (By.CSS_SELECTOR, "button[data-dv-event-id='10']")
 
