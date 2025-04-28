@@ -2,7 +2,7 @@
 import unittest
 
 from booking_host_api.booking import Booking
-from booking_host_api.base import AuthenticationError
+from base.base import AuthenticationError
 
 from .common import BasicBookingTesting, write_private_data_to_file, read_private_data, compare_dicts
 from .common import some_ses, some_auth_cookies, some_property_id
@@ -140,6 +140,26 @@ class TestBookingMethods(BasicBookingTesting):
                     payout, 
                     f'Expected {expected_payout} for booking number {case['booking_id']} and got {payout}.'
                     )
+
+    def test_get_property_room_ids(self):
+        test_cases: list[dict] = read_private_data('get_property_rooms_cases')
+
+        for case in test_cases:
+            case_num = case.pop('case_num')
+            with self.subTest(case_number=case_num):
+                expected_room_ids = case.pop('expected_room_ids')
+                property_id = case.pop('property_id')
+
+                room_ids = self.api.get_property_room_ids(property_id=property_id)
+
+                write_private_data_to_file(ses=self.api.access_ses(), auth_cookies=self.api.access_auth_cookies(), account_id=self.api.access_account_id())
+
+                self.assertEqual(
+                    sorted(room_ids),
+                    sorted(expected_room_ids),
+                    f"Expected room_ids {expected_room_ids} and got {room_ids} for property_id {property_id}."
+                )
+
 
     def test_get_properties(self):
         expected_properties = read_private_data('expected_properties')
