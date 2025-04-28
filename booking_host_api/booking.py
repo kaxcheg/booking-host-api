@@ -14,48 +14,12 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.keys import Keys
 
-from .base import BaseScraping, AuthenticationError, InvalidParameterError, ScrapingError, raise_auth_error_or_for_status, raise_if_blank, raise_scraping_error
+from base.base import (
+    BaseScraping, AuthenticationError, InvalidParameterError, ScrapingError, 
+    raise_auth_error_or_for_status, raise_if_blank, raise_scraping_error)
 from . import booking_locators as locators
 from .config import ELEMENT_WAIT_TIMEOUT, SETUP_WAIT_TIMEOUT, ACCOUNT_RESERVATIONS_ENTRIES_LIMIT, PROPERTY_RESERVATIONS_ENTRIES_LIMIT
-
-class BookingReservation(TypedDict):
-    id: str
-    checkin: date
-    checkout: date
-    property_id: int
-    property_name: str
-    rooms: list[dict[str, int|str]]|None    # rooms can be set to None if method doesn't imply it 
-    booked_date: date
-    guest_name: str
-    adults: int
-    children: list[int, list[int]]|None     # Number of children if any and their ages in list
-    total_price: Decimal    # Can be set to 0.00 by some methods if reservation is cancelled 
-    fee: Decimal    # Fee shown on the reservation webpage, not the actual paid fee 
-    currency: str
-    status: str
-
-    @classmethod
-    def normalize(cls, reservation: "BookingReservation") -> dict[str, str|int|list]:
-        """
-          - date -> ISO (YYYY-MM-DD)
-          - Decimal -> str
-        """
-        return {
-            "id": reservation["id"],
-            "checkin": reservation["checkin"].isoformat(),
-            "checkout": reservation["checkout"].isoformat(),
-            "property_id": reservation["property_id"],
-            "property_name": reservation["property_name"],
-            "rooms": reservation["rooms"],
-            "booked_date": reservation["booked_date"].isoformat(),
-            "guest_name": reservation["guest_name"],
-            "adults": reservation["adults"],
-            "children": reservation["children"],
-            "total_price": str(reservation["total_price"]),
-            "fee": str(reservation["fee"]),
-            "currency": reservation["currency"],
-            "status": reservation["status"],
-        }
+from .models import BookingReservation
 
 class Booking(BaseScraping):
     """
@@ -138,12 +102,13 @@ class Booking(BaseScraping):
             - OTP function which returns OTP code in string. Function should receive string argument with message.
         """
 
-        # init with nonblank auth data
+        # init with nonblank auth data and setup session
         if ses is not None and auth_cookies is not None and account_id is not None and email is None and password is None and OTP is None:
             raise_if_blank({'ses': ses, 'auth_cookies': auth_cookies, 'account_id': account_id})
             self._ses = ses
             self._auth_cookies = auth_cookies
             self._account_id = account_id
+            self._setup_session()
 
         # init with nonblank credentials
         elif email is not None and password is not None and ses is None and auth_cookies is None:
@@ -163,7 +128,7 @@ class Booking(BaseScraping):
                     '--headless'
                 ]
 
-            # login and setup auth data (ses, auth_cookies, account_id if needed with Selenium
+            # set atributes for authenticate_and_setup method
             super().__init__(
                 email=email,
                 password=password,
@@ -175,19 +140,10 @@ class Booking(BaseScraping):
             raise InvalidParameterError('Wrong usage: provide nonblank/nonzero values for email, password and optional account_id OR '
                 'ses, auth_cookies and account_id')
         
-        # checking if attributes are truthy
-        if not self._ses:
-            raise ScrapingError('Scraping failed: ses value was not set.')
-        if not self._auth_cookies:
-            raise ScrapingError('Scraping failed: auth_cookies value was not set.')
-        if not self._account_id:
-            raise ScrapingError('Scraping failed: account_id value was not set.')
-        
+    def _setup_session(self) -> None:
         # initializing requests session
         self._session = requests.Session()
         self._session.headers = {
-            'cache-control': 'no-cache',
-            'content-type': 'application/json',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36',
         }
         self._session.cookies.update(self._auth_cookies)
@@ -278,7 +234,7 @@ class Booking(BaseScraping):
                 # possibly valid OTP but session expired response
                 raise AuthenticationError(f'{error_text}')
 
-        driver = self.driver
+        driver = self._driver
         OTP_func_provided = bool(self._OTP_func)
         driver.get(locators.login_url)
 
@@ -350,8 +306,18 @@ class Booking(BaseScraping):
             sms_login()
 
     def _login(self):
-        """Logs in and sets up ses, auth_, account_id using Selenium browser"""
+        """Logs in and sets up ses, auth_cookies, account_id using Selenium browser"""
         self._email_login()
+
+        # checking if attributes are truthy
+        if not self._ses:
+            raise ScrapingError('Scraping failed: ses value was not set.')
+        if not self._auth_cookies:
+            raise ScrapingError('Scraping failed: auth_cookies value was not set.')
+        if not self._account_id:
+            raise ScrapingError('Scraping failed: account_id value was not set.')
+        
+        self._setup_session()
 
     def access_ses(self) -> str:
         return self._ses
