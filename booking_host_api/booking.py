@@ -396,6 +396,63 @@ class Booking(BaseScraping):
 
         return all_properties
 
+    def get_property_room_ids(self, property_id: int, target_date: str = None) -> list[int]:
+        """
+        Returns list of room IDs for a given property_id.
+
+        Args:
+        - property_id: id of the property (hotel_id)
+        - target_date: date for which rooms are checked (format 'YYYY-MM-DD'), defaults to today
+
+        Returns:
+        - List of integers (room_id)
+        """
+        if target_date is None:
+            target_date = datetime.today().strftime('%Y-%m-%d')
+
+        payload = {
+            "ses": self._ses,
+            "hotel_account_id": self._account_id,
+            "hotel_id": property_id,
+            "lang": "en",
+            "request": json.dumps({
+                "allow_past_dates": True,
+                "dates": {
+                    "range": False,
+                    "dates": [target_date]
+                },
+                "hotel": {
+                    "fields": ["rooms"],
+                    "rooms": {
+                        "fields": ["name", "num_guests", "rates"],
+                        "rates": {
+                            "fields": ["name", "price", "relationships"]
+                        }
+                    }
+                }
+            })
+        }
+
+        response = self._session.post(
+            url=locators.endpoint_inventory,
+            json=payload
+        )
+        raise_auth_error_or_for_status(response, {
+            401: 'Unauthorized', 
+            400: 'Bad Request'
+        }, 
+        'ses or auth_cookies are expired or nonvalid. Update running with an email and password.')
+
+        self._update_auth_cookies_from_cookies()
+
+        try:
+            hotel_data = response.json()['data']['hotel'][str(property_id)]
+            room_ids = hotel_data['room_ids']
+        except (KeyError, JSONDecodeError) as e:
+            raise ScrapingError('Unexpected response structure') from e
+
+        return [int(room_id) for room_id in room_ids]
+
     def get_account_reservations(
             self,  
             date_min:str,   # use 'YYYY-MM-DD' format
@@ -741,9 +798,8 @@ class Booking(BaseScraping):
         
     def get_ics_calendar(self, property_id:int, room_id:str) -> str:
         """
-            Returns ics format calendar in string for property and room ids.
+            Returns ics format calendar in string for property and room id.
 
-            room_id should be string containing 2 digits: '01', '12' etc.
         """
         headers = {
             'referer': 'https://admin.booking.com/hotel/hoteladmin/extranet_ng/manage/sync/index.html',
@@ -754,7 +810,7 @@ class Booking(BaseScraping):
             'ses': self._ses,
             'hotel_account_id': self._account_id,
             'lang': 'en',
-            'room_id': str(property_id)+room_id,
+            'room_id': str(room_id),
             'name': 'random_name_for_response',
         }
 

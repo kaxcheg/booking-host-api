@@ -25,6 +25,7 @@ auth_cookie_names = [
 
 endpoint_graphql = 'https://admin.booking.com/dml/graphql.json'
 endpoint_property_reservations = 'https://admin.booking.com/fresa/extranet/reservations/retrieve_list_v2'
+endpoint_inventory = "https://admin.booking.com/fresa/extranet/inventory/fetch"
 endpoint_guest_profile = 'https://admin.booking.com/fresa/booker_profile/retrieve'
 endpoint_payout = 'https://admin.booking.com/fresa/extranet/reservations/details/get_reservation_payout'
 endpoint_calendar_export = 'https://admin.booking.com/fresa/extranet/ical/create_export_link'
