@@ -5,6 +5,8 @@ from datetime import datetime, date
 from typing import Literal, TypedDict, Callable
 from decimal import Decimal, InvalidOperation
 
+import json
+
 import requests
 from requests.utils import dict_from_cookiejar
 from requests.exceptions import JSONDecodeError
@@ -392,7 +394,7 @@ class Booking(BaseScraping):
                     'name': entry['name']
                     })
         except (KeyError, JSONDecodeError) as e:
-            raise ValueError('Unexpected response') from e
+            raise ScrapingError('Unexpected response') from e
 
         return all_properties
 
@@ -501,7 +503,7 @@ class Booking(BaseScraping):
                     }
                 
             except (KeyError, ValueError, InvalidOperation, IndexError) as e:
-                raise ValueError('Unexpected response.') from e        
+                raise ScrapingError('Unexpected response.') from e        
                 
             return reservation
         
@@ -585,7 +587,7 @@ class Booking(BaseScraping):
                     total_count = response_json['data']['partnerReservation']['searchReservations']['totalRecords']
                 offset += limit
         except (KeyError, JSONDecodeError) as e:
-            raise ValueError('Unexpected response.') from e
+            raise ScrapingError('Unexpected response.') from e
 
         if return_normalized:
             all_reservations_normalized = [BookingReservation.as_json(reservation) for reservation in all_reservations]
@@ -640,7 +642,7 @@ class Booking(BaseScraping):
                     }
                 
             except (KeyError, ValueError, InvalidOperation, IndexError) as e:
-                raise ValueError('Unexpected response.') from e        
+                raise ScrapingError('Unexpected response.') from e        
                 
             return reservation
 
@@ -714,7 +716,7 @@ class Booking(BaseScraping):
                 page_num += 1
 
         except (KeyError, ValueError, JSONDecodeError, StopIteration) as e:
-            raise ValueError('Unexpected response.') from e
+            raise ScrapingError('Unexpected response.') from e
 
         if return_normalized:
             all_reservations_normalized = [BookingReservation.as_json(reservation) for reservation in all_reservations]
@@ -752,7 +754,7 @@ class Booking(BaseScraping):
             else: 
                 return 'Expired'
         except (KeyError, TypeError, JSONDecodeError)  as e:
-            raise ValueError('Unexpected response') from e
+            raise ScrapingError('Unexpected response') from e
 
     def get_payout(self, booking_id:str, property_id:int, return_normalized:bool=False) -> Decimal|str:
         """
@@ -792,7 +794,7 @@ class Booking(BaseScraping):
                 else: 
                     raise ValueError
         except (KeyError, ValueError, UnboundLocalError, InvalidOperation, JSONDecodeError)  as e:
-            raise ValueError('Unexpected response') from e
+            raise ScrapingError('Unexpected response') from e
         
         return str(payout) if return_normalized else payout
         
@@ -826,7 +828,7 @@ class Booking(BaseScraping):
         try:
             calendar_url = response.json()['data']['url']
         except (KeyError, JSONDecodeError) as e:
-            raise ValueError('Unexpected response') from e
+            raise ScrapingError('Unexpected response') from e
         
         calendar = self._session.get(url=calendar_url)
         raise_auth_error_or_for_status(calendar, {
