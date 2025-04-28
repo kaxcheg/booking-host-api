@@ -33,7 +33,7 @@ api = Booking(email='your_email@domain.com', password='your_password')
 
 ```
 ses = api.access_ses()
-cookies = api.access_cookies()
+auth_cookies = api.access_auth_cookies()
 account_id = api.access_account_id()
 ```
 
@@ -50,11 +50,11 @@ calendar = api.get_ics_calendar(booking_id='1234567890', room_id='01')
 ### Initial run with auth data saved before (initializing runs much faster, no scraping is used)
 
 ```
-api = Booking(ses=ses, cookies=cookies, account_id=account_id)
+api = Booking(ses=ses, auth_cookies=auth_cookies, account_id=account_id)
 reservations = api.get_property_reservations(property_id=12345678, date_min='2025-01-01', date_max='2025-02-01')
 ```
 
-Initializing with auth data (ses, cookies, account_id), saved with credentials only initialization, gives access to all methods, 
+Initializing with auth data (ses, auth_cookies, account_id), saved with credentials only initialization, gives access to all methods, 
 except get_account_reservations. To run this one use
 
 ### Initial run with OTP
@@ -63,7 +63,7 @@ except get_account_reservations. To run this one use
 api = Booking(email='your_email@domain.com', password='your_password', OTP=your_get_OTP_func)
 
 ses_with_otp = api.access_ses()
-cookies_with_otp = api.access_cookies()
+auth_cookies_with_otp = api.access_auth_cookies()
 account_id_with_otp = api.access_account_id()
 ```
 
@@ -71,7 +71,7 @@ Initializing with OTP or using corresponding auth data gives access to get_accou
 providing reservations for all account properties (also runs faster then get_property_reservations)::
 
 ```
-api = Booking(ses=ses_with_otp, cookies=cookies_with_otp, account_id=account_id_with_otp)
+api = Booking(ses=ses_with_otp, auth_cookies=auth_cookies_with_otp, account_id=account_id_with_otp)
 reservations = api.get_account_reservations(date_min='2025-01-01', date_max='2025-02-01')
 ```
 
