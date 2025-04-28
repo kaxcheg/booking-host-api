@@ -253,13 +253,17 @@ class Booking(BaseScraping):
         try:
             send_email_result = wait_for_element.until(EC.any_of(
                 EC.presence_of_element_located(locators.password_field_id), 
-                EC.presence_of_element_located(locators.invalid_email_id)
+                EC.presence_of_element_located(locators.invalid_email_id),
+                EC.presence_of_element_located(locators.captcha_css)
                 ))
         except TimeoutException as e:
-            raise_scraping_error((locators.password_field_id, locators.invalid_email_id), e)
+            raise_scraping_error((locators.password_field_id, locators.invalid_email_id, locators.captcha_css), e)
         
         if send_email_result.get_attribute('id') == locators.invalid_email_id[1]:
             raise AuthenticationError('Wrong email.')
+        
+        if locators.captcha_css[1] in send_email_result.get_attribute("class"):
+            raise AuthenticationError('Captcha detected.')
         
         password_field = send_email_result
         del send_email_result
@@ -527,7 +531,7 @@ class Booking(BaseScraping):
             raise ValueError('Unexpected response.') from e
 
         if return_normalized:
-            all_reservations_normalized = [BookingReservation.normalize(reservation) for reservation in all_reservations]
+            all_reservations_normalized = [BookingReservation.as_json(reservation) for reservation in all_reservations]
             return all_reservations_normalized
         else:
             return all_reservations 
@@ -656,7 +660,7 @@ class Booking(BaseScraping):
             raise ValueError('Unexpected response.') from e
 
         if return_normalized:
-            all_reservations_normalized = [BookingReservation.normalize(reservation) for reservation in all_reservations]
+            all_reservations_normalized = [BookingReservation.as_json(reservation) for reservation in all_reservations]
             return all_reservations_normalized
         
         return all_reservations
